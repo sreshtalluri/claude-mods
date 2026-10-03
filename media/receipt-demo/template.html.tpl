@@ -27,12 +27,16 @@
       .ch { opacity: 0; }
 
       /* Act 2: the printer and its slip */
-      #slot { position: absolute; left: 1100px; top: 70px; width: 480px; height: 30px; border-radius: 15px;
-        background: #0f0f0e; box-shadow: inset 0 3px 6px rgba(0,0,0,.8), 0 1px 0 #3d3b37; opacity: 0; }
-      #dayWrap { position: absolute; left: 1150px; top: 86px; width: 380px; height: 900px; }
+      /* A receipt printer: the paper exits its top slot at y=900, header first. */
+      #printer { position: absolute; left: 1080px; top: 884px; width: 520px; height: 240px; border-radius: 26px 26px 0 0;
+        background: linear-gradient(#34322e, #232220); box-shadow: 0 -10px 40px rgba(0,0,0,.35); opacity: 0; }
+      #printer .slit { position: absolute; left: 50px; right: 50px; top: 12px; height: 8px; border-radius: 4px; background: #0b0b0a; }
+      #printer .led { position: absolute; right: 36px; top: 48px; width: 12px; height: 12px; border-radius: 50%; background: #d97757; }
+      #printer .label { position: absolute; left: 40px; top: 42px; font-size: 18px; letter-spacing: 3px; color: #a19d93; }
+      #dayWrap { position: absolute; left: 1150px; top: 14px; width: 380px; height: 870px; overflow: hidden; }
       #day { position: absolute; left: 0; top: 0; width: 380px; }
       .slip svg { display: block; width: 100%; height: auto; }
-      #buttons { position: absolute; left: 1150px; top: 1000px; display: flex; gap: 14px; opacity: 0; }
+      #buttons { position: absolute; left: 1580px; top: 520px; display: flex; flex-direction: column; gap: 14px; opacity: 0; }
       .btn { font-size: 22px; padding: 10px 20px; border-radius: 10px; background: #2d2c29; color: #e9e5dc; border: 1px solid #45433e; }
       #imgBtn { background: #3a3935; }
       #pointer { position: absolute; left: 0; top: 0; width: 34px; height: 46px; opacity: 0; }
@@ -64,8 +68,8 @@
           </div>
         </div>
 
-        <div id="slot"></div>
-        <div id="dayWrap"><div id="day" class="slip">{{DAY_SVG}}</div></div>
+        <div id="printer"><div class="slit"></div><div class="label mono">CLAUDE CODE</div><div class="led"></div></div>
+        <div id="dayWrap"><div id="day" class="slip" data-layout-allow-overflow>{{DAY_SVG}}</div></div>
         <div id="buttons"><span class="btn">Copy text</span><span id="imgBtn" class="btn">Copy image</span></div>
         <div id="toast">Receipt image copied</div>
 
@@ -91,19 +95,27 @@
 
       // Act 2: Enter; the terminal steps aside and the slip feeds out of the slot.
       tl.to("#term", { x: -300, scale: 0.82, opacity: 0.5, duration: 0.7, ease: "power2.inOut" }, 1.9);
-      tl.to("#slot", { opacity: 1, duration: 0.4 }, 2.0);
-      tl.fromTo("#day", { clipPath: "inset(0% 0% 100% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 2.8, ease: "none" }, 2.3);
-      tl.to("#buttons", { opacity: 1, duration: 0.4 }, 5.0);
+      tl.fromTo("#printer", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 1.95);
+      // Line feeds: the paper rises out of the slot in short steps while the printer hums.
+      tl.set("#day", { opacity: 0 }, 0);
+      tl.set("#day", { opacity: 1 }, 2.4);
+      tl.fromTo("#day", { yPercent: 100 }, { yPercent: 0, duration: 2.7, ease: "steps(36)" }, 2.4);
+      tl.to("#printer", { x: 1.5, duration: 0.05, repeat: 53, yoyo: true, ease: "none" }, 2.4);
+      tl.fromTo("#printer .led", { opacity: 1 }, { opacity: 0.25, duration: 0.15, repeat: 17, yoyo: true, ease: "steps(1)" }, 2.4);
+      tl.set("#printer .led", { backgroundColor: "#7fb77e", opacity: 1 }, 5.15);
+      tl.to("#printer", { x: 0, duration: 0.05 }, 5.12);
+      tl.to("#buttons", { opacity: 1, duration: 0.4 }, 5.2);
 
       // The cursor presses Copy image; the toast says it worked.
-      tl.fromTo("#pointer", { x: 900, y: 760, opacity: 0 }, { x: 1345, y: 1015, opacity: 1, duration: 0.8, ease: "power2.inOut" }, 5.1);
+      tl.fromTo("#pointer", { x: 1000, y: 800, opacity: 0 }, { x: 1690, y: 600, opacity: 1, duration: 0.8, ease: "power2.inOut" }, 5.1);
       tl.to("#pointer", { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1 }, 5.95);
       tl.set("#imgBtn", { backgroundColor: "#d97757", color: "#141413" }, 5.95);
       tl.fromTo("#toast", { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 6.1);
 
       // Act 3: everything else clears; the slips settle into the hero.
-      tl.to(["#term", "#buttons", "#pointer", "#slot", "#toast"], { opacity: 0, duration: 0.5 }, 7.2);
-      tl.to("#dayWrap", { x: -120, y: 30, rotation: -3, duration: 1.1, ease: "power3.inOut" }, 7.3);
+      tl.to(["#term", "#buttons", "#pointer", "#toast"], { opacity: 0, duration: 0.5 }, 7.2);
+      tl.to("#printer", { y: 260, opacity: 0, duration: 0.6, ease: "power2.in" }, 7.2);
+      tl.to("#dayWrap", { x: -120, y: 102, rotation: -3, duration: 1.1, ease: "power3.inOut" }, 7.3);
       tl.fromTo("#week", { x: 520, rotation: 14, opacity: 0 }, { x: 0, rotation: 6, opacity: 1, duration: 1.1, ease: "power3.out" }, 7.6);
       tl.fromTo("#title", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 8.0);
       tl.fromTo("#tagline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 8.25);

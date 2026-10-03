@@ -1,7 +1,12 @@
 {
   "name": "session-receipt",
-  "version": "0.3.1",
+  "version": "1.0.0",
   "description": "Prints a shareable receipt of your Claude Code session: tokens, cost, tools, files, and a few silly stats.",
-  "author": { "name": "Sreshta Talluri", "url": "https://github.com/sreshtalluri" },
-  "types": "./types/index.d.ts"
+  "author": {
+    "name": "Sreshta Talluri",
+    "url": "https://github.com/sreshtalluri"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "homepage": "https://github.com/sreshtalluri/claude-mods"
 }
