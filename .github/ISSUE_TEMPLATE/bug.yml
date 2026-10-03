@@ -1,0 +1,16 @@
+name: Bug
+description: A mod doing the wrong thing
+labels: [bug]
+body:
+  - type: input
+    id: mod
+    attributes: { label: Which mod, placeholder: session-receipt }
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes: { label: What happened, and what you expected }
+    validations: { required: true }
+  - type: input
+    id: env
+    attributes: { label: "Claude Code version, OS, and terminal or desktop app" }
+    validations: { required: true }

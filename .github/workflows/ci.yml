@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only token; PRs from forks get no secrets either way.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Install Claude Code
+        run: npm install --global @anthropic-ai/claude-code@2.1.286
+      - name: Validate the marketplace
+        run: claude plugin validate .
+      - name: Validate and test every mod
+        run: |
+          for dir in plugins/*/; do
+            echo "::group::$dir"
+            claude plugin validate "$dir"
+            if ls "$dir"tests/*.test.ts* >/dev/null 2>&1; then claude plugin test "$dir"; fi
+            echo "::endgroup::"
+          done

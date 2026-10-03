@@ -1,0 +1,217 @@
+<title>claude-mods Backlog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column workbench. Status strip on top (filters), then ideas grouped by category as index cards that expand in place. */
+:root {
+  --bg: #eef1f6; --card: #ffffff; --fg: #18202e; --muted: #5d6779; --line: #d5dbe6;
+  --accent: #3049c9; --accent-soft: #e3e8fb;
+  --s-idea: #7a8396; --s-next: #b06a00; --s-building: #3049c9; --s-shipped: #1d8a52; --s-parked: #9aa1ad;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121621; --card: #1a2030; --fg: #e4e8f1; --muted: #98a2b6; --line: #2b3346;
+  --accent: #8fa2ff; --accent-soft: #252e4d;
+  --s-idea: #98a2b6; --s-next: #f0a840; --s-building: #8fa2ff; --s-shipped: #4fc788; --s-parked: #667086;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121621; --card: #1a2030; --fg: #e4e8f1; --muted: #98a2b6; --line: #2b3346;
+  --accent: #8fa2ff; --accent-soft: #252e4d;
+  --s-idea: #98a2b6; --s-next: #f0a840; --s-building: #8fa2ff; --s-shipped: #4fc788; --s-parked: #667086;
+  color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+.wrap { max-width: 960px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: grid; gap: 24px }
+header { display: grid; gap: 6px }
+.eyebrow { font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.05 var(--display); margin: 0; text-wrap: balance }
+.sub { color: var(--muted); margin: 0; max-width: 62ch }
+
+.strip { display: flex; flex-wrap: wrap; gap: 8px }
+.chip { font: 500 13px var(--mono); border: 1px solid var(--line); background: var(--card); color: var(--fg);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft) }
+.chip b { font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums }
+.dot { width: 8px; height: 8px; border-radius: 50% }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between }
+.btn { font: 600 14px var(--body); border: 1px solid var(--accent); background: var(--accent); color: var(--card);
+  border-radius: 8px; padding: 8px 14px; cursor: pointer }
+.btn.ghost { background: transparent; color: var(--accent) }
+.btn.danger { border-color: #c2413a; background: transparent; color: #c2413a }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100% }
+textarea { resize: vertical; min-height: 64px }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+#search { max-width: 260px }
+
+form.add { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; grid-template-columns: 1fr 1fr }
+form.add .full { grid-column: 1 / -1 }
+label { display: grid; gap: 4px; font: 500 12px var(--mono); color: var(--muted); letter-spacing: .03em; text-transform: uppercase }
+
+section.cat { display: grid; gap: 10px }
+section.cat h2 { font: 600 19px var(--display); margin: 0; display: flex; gap: 10px; align-items: baseline }
+section.cat h2 span { font: 400 13px var(--mono); color: var(--muted) }
+.cards { display: grid; gap: 8px }
+.card { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--st); border-radius: 8px; min-width: 0 }
+.card > .head { display: flex; gap: 12px; align-items: center; padding: 12px 14px; cursor: pointer; width: 100%; background: none; border: 0; color: inherit; font: inherit; text-align: left }
+.card .t { font-weight: 600; flex: 1; min-width: 0 }
+.card .w { color: var(--muted); font-size: 14px; display: block; font-weight: 400 }
+.pill { font: 500 12px var(--mono); color: var(--st); border: 1px solid currentColor; border-radius: 999px; padding: 2px 9px; white-space: nowrap }
+.card[data-status="shipped"] .t { text-decoration: none }
+.card[data-status="parked"] { opacity: .7 }
+.body { padding: 0 14px 14px; display: grid; gap: 12px; grid-template-columns: 1fr 1fr }
+.body .full { grid-column: 1 / -1 }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.row select { width: auto }
+.meta { font: 12px var(--mono); color: var(--muted) }
+.empty { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; padding: 28px; text-align: center; color: var(--muted) }
+@media (max-width: 640px) { form.add, .body { grid-template-columns: 1fr } #search { max-width: none } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">sreshtalluri / claude-mods</div>
+    <h1>Mod backlog</h1>
+    <p class="sub">Every mod idea, what's good about it, what could sink it, and where it stands. Click a card to edit it or change its status.</p>
+  </header>
+
+  <div class="strip" id="strip" role="group" aria-label="Filter by status"></div>
+
+  <div class="toolbar">
+    <input id="search" type="search" placeholder="Search ideas" aria-label="Search ideas">
+    <button class="btn" id="toggleAdd" type="button">Add idea</button>
+  </div>
+
+  <form class="add" id="addForm" hidden>
+    <label class="full">Name<input id="f-title" required placeholder="Turn-length games"></label>
+    <label>Category<input id="f-cat" list="cats" required placeholder="Games inside Claude's turn"></label>
+    <label>Status<select id="f-status"></select></label>
+    <label class="full">What it is<textarea id="f-what"></textarea></label>
+    <label>Why it could win<textarea id="f-pros"></textarea></label>
+    <label>Why it might not<textarea id="f-cons"></textarea></label>
+    <div class="full row"><button class="btn" type="submit">Save idea</button><button class="btn ghost" type="button" id="cancelAdd">Cancel</button></div>
+  </form>
+  <datalist id="cats"></datalist>
+
+  <main id="list"><div class="empty">Loading ideas…</div></main>
+</div>
+
+<script>
+const STATUSES = [
+  ["idea", "Idea"], ["next", "Up next"], ["building", "Building"], ["shipped", "Shipped"], ["parked", "Parked"]
+];
+const ORDER = Object.fromEntries(STATUSES.map(([k], i) => [k, i]));
+let ideas = [], filter = null, query = "", open = new Set(), col = null;
+
+const $ = (s) => document.querySelector(s);
+function el(tag, props = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (k in n) n[k] = v; else n.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null) n.append(c);
+  return n;
+}
+const stColor = (s) => `var(--s-${s})`;
+const statusSelect = (value, onchange, id) => el("select", { id, onchange, "aria-label": "Status" },
+  STATUSES.map(([k, l]) => el("option", { value: k, selected: k === value, textContent: l })));
+
+function renderStrip() {
+  const counts = Object.fromEntries(STATUSES.map(([k]) => [k, 0]));
+  ideas.forEach((i) => counts[i.status] = (counts[i.status] || 0) + 1);
+  $("#strip").replaceChildren(
+    el("button", { className: "chip", type: "button", "aria-pressed": String(filter === null), onclick: () => { filter = null; render(); } },
+      "All", el("b", { textContent: ideas.length })),
+    ...STATUSES.map(([k, l]) => el("button", { className: "chip", type: "button", "aria-pressed": String(filter === k),
+      onclick: () => { filter = filter === k ? null : k; render(); } },
+      el("span", { className: "dot", style: `background:${stColor(k)}` }), l, el("b", { textContent: counts[k] })))
+  );
+  $("#cats").replaceChildren(...[...new Set(ideas.map((i) => i.category))].map((c) => el("option", { value: c })));
+}
+
+function save(id, patch) {
+  if (!col) return;
+  col.doc(id).update({ ...patch, updatedAt: new Date().toISOString() }).catch((e) => alertLine(`Couldn't save: ${e.message || e.code}`));
+}
+function alertLine(msg) { $("#list").prepend(el("div", { className: "empty", textContent: msg })); }
+
+function field(idea, key, label, full) {
+  return el("label", { className: full ? "full" : "" }, label,
+    el("textarea", { id: `${idea.id}-${key}`, value: idea[key] || "", onchange: (e) => save(idea.id, { [key]: e.target.value }) }));
+}
+
+function card(idea) {
+  const isOpen = open.has(idea.id);
+  const c = el("article", { className: "card", style: `--st:${stColor(idea.status)}`, "data-status": idea.status },
+    el("button", { className: "head", type: "button", "aria-expanded": String(isOpen),
+      onclick: () => { isOpen ? open.delete(idea.id) : open.add(idea.id); render(); } },
+      el("span", { className: "t" }, idea.title, el("span", { className: "w", textContent: (idea.what || "").split(/(?<=\.)\s/)[0] })),
+      el("span", { className: "pill", textContent: STATUSES[ORDER[idea.status]]?.[1] || idea.status })));
+  if (isOpen) {
+    let confirming = false;
+    const del = el("button", { className: "btn danger", type: "button", textContent: "Delete",
+      onclick: () => { if (!confirming) { confirming = true; del.textContent = "Click again to delete"; return; }
+        col && col.doc(idea.id).delete(); open.delete(idea.id); } });
+    c.append(el("div", { className: "body" },
+      el("div", { className: "full row" }, statusSelect(idea.status, (e) => save(idea.id, { status: e.target.value }), `${idea.id}-status`),
+        el("input", { id: `${idea.id}-title`, value: idea.title, style: "flex:1;min-width:180px", "aria-label": "Name",
+          onchange: (e) => save(idea.id, { title: e.target.value }) })),
+      field(idea, "what", "What it is", true),
+      field(idea, "pros", "Why it could win"),
+      field(idea, "cons", "Why it might not"),
+      field(idea, "notes", "Notes and progress", true),
+      el("div", { className: "full row", style: "justify-content:space-between" },
+        el("span", { className: "meta", textContent: idea.updatedAt ? `Updated ${new Date(idea.updatedAt).toLocaleDateString()}` : "" }), del)));
+  }
+  return c;
+}
+
+function render() {
+  renderStrip();
+  const q = query.toLowerCase();
+  const shown = ideas.filter((i) => (!filter || i.status === filter) &&
+    (!q || [i.title, i.what, i.category, i.notes].join(" ").toLowerCase().includes(q)));
+  if (!ideas.length) return $("#list").replaceChildren(el("div", { className: "empty", textContent: col ? "No ideas yet. Use Add idea to write the first one." : "Sign in to claude.ai to see and edit the backlog." }));
+  if (!shown.length) return $("#list").replaceChildren(el("div", { className: "empty", textContent: "Nothing matches this filter." }));
+  const groups = new Map();
+  shown.sort((a, b) => (a.catOrder ?? 99) - (b.catOrder ?? 99) || ORDER[a.status] - ORDER[b.status] || (a.createdAt || "").localeCompare(b.createdAt || ""))
+    .forEach((i) => (groups.get(i.category) || groups.set(i.category, []).get(i.category)).push(i));
+  $("#list").replaceChildren(el("div", { style: "display:grid;gap:28px" },
+    [...groups].map(([cat, items]) => el("section", { className: "cat" },
+      el("h2", {}, cat, el("span", { textContent: `${items.length}` })),
+      el("div", { className: "cards" }, items.map(card))))));
+}
+
+$("#f-status").replaceWith(statusSelect("idea", null, "f-status"));
+$("#toggleAdd").onclick = () => { $("#addForm").hidden = !$("#addForm").hidden; if (!$("#addForm").hidden) $("#f-title").focus(); };
+$("#cancelAdd").onclick = () => { $("#addForm").hidden = true; };
+$("#search").oninput = (e) => { query = e.target.value; render(); };
+$("#addForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!col) return;
+  const cat = $("#f-cat").value.trim();
+  const existing = ideas.find((i) => i.category === cat);
+  const now = new Date().toISOString();
+  await col.add({ title: $("#f-title").value.trim(), category: cat, status: $("#f-status").value,
+    what: $("#f-what").value, pros: $("#f-pros").value, cons: $("#f-cons").value, notes: "",
+    catOrder: existing ? existing.catOrder ?? 99 : 99, createdAt: now, updatedAt: now });
+  e.target.reset(); e.target.hidden = true;
+});
+
+(async () => {
+  const db = await window.claude?.use?.("db");
+  if (!db) { render(); return; }
+  col = db.collection("ideas");
+  col.onSnapshot((snap) => {
+    ideas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Keep focus on a textarea being edited across live redraws.
+    const a = document.activeElement;
+    if (a && a.id && (a.tagName === "TEXTAREA" || a.tagName === "INPUT") && a.closest(".card")) return renderStrip();
+    render();
+  }, (e) => alertLine(`Couldn't load ideas: ${e.message}`));
+})();
+</script>

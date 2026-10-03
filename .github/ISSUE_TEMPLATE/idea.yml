@@ -1,0 +1,8 @@
+name: Idea
+description: A new mod, or a change to one
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes: { label: The idea, description: "What it does and when you'd use it." }
+    validations: { required: true }
