@@ -6,20 +6,29 @@ import {
   countAbsolutelyRight,
   countApologies,
   emptyStats,
+  DAY,
   formatReceipt,
+  formatWeek,
+  isCredit,
   isRule,
   isShipCommand,
   isTotal,
   receiptFileName,
   receiptSvg,
   slipLines,
+  summarize,
 } from './format'
+import { clipboardCommand, drawCommands } from './image'
+import type { Platform } from './image'
+import type { ReceiptInput, SessionSummary } from './format'
 
 const stats = atom({ plugin: 'session-receipt', key: 'stats' } as const, emptyStats())
 const LIFETIME = 'lifetime'
 /** The last saved receipt: `{ lines, path, seen }`, for `/receipt last` and the next start's toast. */
 const LAST = 'last'
 type LastReceipt = { lines: string[]; path: string; seen: boolean }
+/** Finished sessions' summaries, a month deep, for `/receipt week`. */
+const HISTORY = 'history'
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 /** Never let bookkeeping break the session: a failed write just loses a stat. */
@@ -36,10 +45,10 @@ const readLifetime = async ($: EngineInterface): Promise<ReceiptLifetime> => {
   return { sessions: Number(raw?.sessions ?? 0), usd: Number(raw?.usd ?? 0) }
 }
 
-const buildReceipt = async ($: EngineInterface): Promise<string[]> => {
+const snapshot = async ($: EngineInterface): Promise<ReceiptInput> => {
   const usage = await $.session.usage()
   const lifetime = await readLifetime($)
-  return formatReceipt({
+  return {
     stats: await read($, stats),
     usd: usage.cost?.usd ?? null,
     startedAt: usage.startedAt,
@@ -47,7 +56,45 @@ const buildReceipt = async ($: EngineInterface): Promise<string[]> => {
     cwd: await $.session.cwd(),
     sessionId: await $.session.id(),
     number: lifetime.sessions + 1,
-  })
+    model: await $.session.model().catch(() => null),
+  }
+}
+
+const isEmpty = (s: ReceiptStats) => s.turns === 0 && s.toolCalls === 0
+
+const readHistory = async ($: EngineInterface) =>
+  ((await $.store.get(HISTORY)) as SessionSummary[] | undefined) ?? []
+
+const receiptsDir = async ($: EngineInterface) =>
+  `${(await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE')) ?? '~'}/.claude/receipts`
+
+/** The slip as a square PNG on the clipboard; where nothing can draw it, the SVG's path. */
+const copyImage = async ($: EngineInterface, lines: string[]) => {
+  try {
+    const dir = `${await receiptsDir($)}/images`
+    const svg = `${dir}/receipt.svg`
+    const png = `${svg}.png`
+    await $.fs.write(svg, receiptSvg(lines, { backdrop: true }))
+
+    const os: Platform =
+      (await $.env.get('OS')) === 'Windows_NT' ? 'windows'
+      : (await $.process.run(['uname']).then(r => r.stdout.trim(), () => '')) === 'Darwin' ? 'mac'
+      : 'linux'
+    const ok = (argv: string[]) => $.process.run(argv, { timeoutMs: 20_000 }).then(r => r.exitCode === 0, () => false)
+
+    let drawn = false
+    const win = {
+      programFiles: (await $.env.get('ProgramFiles')) ?? 'C:\\Program Files',
+      programFilesX86: (await $.env.get('ProgramFiles(x86)')) ?? 'C:\\Program Files (x86)',
+      localAppData: (await $.env.get('LOCALAPPDATA')) ?? '',
+    }
+    for (const argv of drawCommands(os, svg, png, dir, win)) if ((drawn = await ok(argv))) break
+
+    if (drawn && (await ok(clipboardCommand(os, png)))) $.ui.toast('🧾 Receipt image copied')
+    else $.ui.toast(`Receipt image saved: ${drawn ? png : svg}`, { timeoutMs: 8000 })
+  } catch {
+    $.ui.toast('Could not make the receipt image')
+  }
 }
 
 export const register: Register = on => {
@@ -57,8 +104,8 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'receipt',
-      description: 'Print a receipt for this session (tokens, cost, tools, files)',
-      argumentHint: '[last]',
+      description: 'Print a receipt for this session (or: last, week)',
+      argumentHint: '[last|week]',
     })
     const last = (await $.store.get(LAST)) as LastReceipt | undefined
     if (last && !last.seen) {
@@ -125,7 +172,14 @@ export const register: Register = on => {
       if (!last) return { text: 'No saved receipt yet: one is saved when a session ends.' }
       return { text: '```\n' + last.lines.join('\n') + '\n```\n' + last.path }
     }
-    const lines = await buildReceipt($)
+    const now = await $.clock.now()
+    if (e.args.trim() === 'week') {
+      const current = await snapshot($)
+      const sessions = await readHistory($)
+      const lines = formatWeek(isEmpty(current.stats) ? sessions : [...sessions, summarize(current.stats, current)], now)
+      return { text: '```\n' + lines.join('\n') + '\n```' }
+    }
+    const lines = formatReceipt(await snapshot($))
     return { text: '```\n' + lines.join('\n') + '\n```' }
   })
 
@@ -141,13 +195,18 @@ export const register: Register = on => {
       $.ui.toast('Receipt copied')
     }
 
+    const image: ButtonProps['onPress'] = () => void copyImage($, lines)
+
     if (e.surface !== 'terminal') {
       // Proportional-font surfaces: draw a paper slip instead of padded text.
       const { Box, Svg, Button } = $.ui.resolve(e)
       return (
         <Box flexDirection="column" alignItems="flex-start" gap={1}>
           <Svg key="slip" source={receiptSvg(lines)} alt={plain} />
-          <Button key="copy" label="Copy receipt" onPress={copy} />
+          <Box key="actions" flexDirection="row" gap={1}>
+            <Button key="copy" label="Copy text" onPress={copy} />
+            <Button key="image" label="Copy image" onPress={image} />
+          </Box>
         </Box>
       )
     }
@@ -163,32 +222,31 @@ export const register: Register = on => {
               <Text bold color="green">
                 {line}
               </Text>
-            ) : isRule(line) ? (
+            ) : isRule(line) || isCredit(line) ? (
               <Text dimColor>{line}</Text>
             ) : (
               <Text>{line}</Text>
             ),
           )}
         </Box>
-        <Button key="copy" label="Copy receipt" onPress={copy} />
+        <Box key="actions" flexDirection="row" gap={1}>
+          <Button key="copy" label="Copy text" onPress={copy} />
+          <Button key="image" label="Copy image" onPress={image} />
+        </Box>
       </Box>
     )
   })
 
   on('session.end', async ($, e, next) => {
     try {
-      const s = await read($, stats)
+      const r = await snapshot($)
       // An opened-and-closed session gets no receipt and no number.
-      if (s.turns > 0 || s.toolCalls > 0) {
-        const usage = await $.session.usage()
-        const lifetime = await readLifetime($)
-        const lines = await buildReceipt($)
-        const home = (await $.env.get('HOME')) ?? '~'
-        const path = `${home}/.claude/receipts/${receiptFileName(await $.clock.now(), await $.session.cwd(), lifetime.sessions + 1)}`
-        await $.store.set(LIFETIME, {
-          sessions: lifetime.sessions + 1,
-          usd: lifetime.usd + (usage.cost?.usd ?? 0),
-        })
+      if (!isEmpty(r.stats)) {
+        const lines = formatReceipt(r)
+        const path = `${await receiptsDir($)}/${receiptFileName(r.now, r.cwd, r.number)}`
+        const history = (await readHistory($)).filter(x => r.now - x.at < 35 * DAY)
+        await $.store.set(LIFETIME, { sessions: r.number, usd: (await readLifetime($)).usd + (r.usd ?? 0) })
+        await $.store.set(HISTORY, [...history, summarize(r.stats, r)])
         await $.store.set(LAST, { lines, path, seen: false } satisfies LastReceipt)
         await $.fs.write(path, lines.join('\n') + '\n')
       }

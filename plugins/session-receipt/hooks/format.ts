@@ -29,6 +29,16 @@ export type ReceiptInput = {
   cwd: string
   sessionId: string
   number: number
+  model: string | null
+}
+
+/** Where to get one: the receipt's small print, so a shared screenshot says it. */
+export const CREDIT = 'sreshtalluri/claude-mods'
+
+/** `claude-opus-5-5[1m]` reads as `OPUS 5.5` on a receipt; anything else, as given. */
+export const prettyModel = (model: string): string => {
+  const m = /(opus|sonnet|haiku|fable)-(\d+)(?:-(\d{1,2}))?(?!\d)/i.exec(model)
+  return (m ? `${m[1]} ${m[2]}${m[3] ? '.' + m[3] : ''}` : model.replace(/\[.*\]$/, '')).toUpperCase()
 }
 
 const ABSOLUTELY_RIGHT = /you'?re (absolutely|completely|totally) right/gi
@@ -107,6 +117,13 @@ export const barcode = (seed: string): string => {
   return center(out.slice(0, WIDTH - 4))
 }
 
+/** Footer, barcode and small print: how every slip ends. */
+const close = (push: (line: string) => void, thanks: string, seed: string) => {
+  push(center(thanks))
+  push(barcode(seed))
+  push(center(CREDIT))
+}
+
 const footer = (s: ReceiptStats): string => {
   if (s.absolutelyRight >= 3) return 'YOU WERE ABSOLUTELY RIGHT'
   if (s.failedCalls >= 10) return 'IT WORKED ON MY MACHINE'
@@ -126,6 +143,7 @@ export const formatReceipt = (r: ReceiptInput): string[] => {
   push(center(`RECEIPT #${String(r.number).padStart(4, '0')}`))
   push(center(stamp(r.now)))
   push(center(basename(r.cwd) || '~'))
+  if (r.model) push(center(`SERVED BY ${prettyModel(r.model)}`))
   push(RULE)
 
   const tools = Object.entries(s.toolCounts).sort((a, b) => b[1] - a[1])
@@ -165,8 +183,7 @@ export const formatReceipt = (r: ReceiptInput): string[] => {
   push(DOUBLE_RULE)
   push(row('TOTAL', r.usd === null ? 'n/a' : `$${r.usd.toFixed(2)}`))
   push(DOUBLE_RULE)
-  push(center(footer(s)))
-  push(barcode(`${r.sessionId}:${r.startedAt}:${r.number}`))
+  close(push, footer(s), `${r.sessionId}:${r.startedAt}:${r.number}`)
 
   return lines
 }
@@ -174,6 +191,8 @@ export const formatReceipt = (r: ReceiptInput): string[] => {
 /** Lines the drawing styles differently, by exact content. */
 export const isRule = (line: string) => line === RULE || line === DOUBLE_RULE
 export const isTotal = (line: string) => line.startsWith('TOTAL')
+export const isCredit = (line: string) => line.trim() === CREDIT
+const isBarcode = (line: string) => line.includes('|') && /^[| ]+$/.test(line)
 
 /** The receipt's lines out of a CommandOutput row: what sits between the ``` fences. */
 export const slipLines = (text: string): string[] => {
@@ -191,7 +210,7 @@ const xml = (s: string) =>
  * Rules and the barcode are drawn as shapes, so only the text depends on the
  * font being monospace.
  */
-export const receiptSvg = (lines: string[]): string => {
+export const receiptSvg = (lines: string[], { backdrop = false } = {}): string => {
   const FS = 13
   const CW = FS * 0.6 // monospace advance
   const LH = 19
@@ -217,11 +236,15 @@ export const receiptSvg = (lines: string[]): string => {
     if (line === RULE) return `<line x1="${PAD}" x2="${w - PAD}" y1="${mid}" y2="${mid}" stroke="#9a968c" stroke-dasharray="4 3"/>`
     if (line === DOUBLE_RULE)
       return `<line x1="${PAD}" x2="${w - PAD}" y1="${mid - 2}" y2="${mid - 2}" stroke="#2b2a27"/><line x1="${PAD}" x2="${w - PAD}" y1="${mid + 2}" y2="${mid + 2}" stroke="#2b2a27"/>`
-    if (i === lines.length - 1 && /^[| ]+$/.test(line))
+    if (isBarcode(line))
       return [...line]
-        .map((c, j) => (c === '|' ? `<rect x="${(PAD + j * CW).toFixed(1)}" y="${y + 1}" width="${(CW * 0.55).toFixed(1)}" height="${LH + 10}" fill="#2b2a27"/>` : ''))
+        .map((c, j) => (c === '|' ? `<rect x="${(PAD + j * CW).toFixed(1)}" y="${y - 2}" width="${(CW * 0.55).toFixed(1)}" height="${LH + 1}" fill="#2b2a27"/>` : ''))
         .join('')
-    const style = i === 0 ? ' font-weight="700"' : isTotal(line) ? ' font-weight="700" fill="#1f7a3a"' : ''
+    const style =
+      i === 0 ? ' font-weight="700"'
+      : isTotal(line) ? ' font-weight="700" fill="#1f7a3a"'
+      : isCredit(line) ? ` fill="#8a867c" font-size="${FS - 2}"`
+      : ''
     // Centered lines anchor on the middle; rows are stretched to the slip's
     // width, so the dot leaders line up whatever monospace the surface has.
     const text = line.trimEnd()
@@ -230,14 +253,19 @@ export const receiptSvg = (lines: string[]): string => {
       : `<text x="${PAD}" y="${y + FS}" textLength="${(text.length * CW).toFixed(1)}" lengthAdjust="spacingAndGlyphs"${style}>${xml(text)}</text>`
   })
 
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h + 12}" viewBox="0 0 ${w} ${h + 12}">` +
+  const slip =
     `<path d="${edge}" fill="#000" opacity="0.18" transform="translate(0 3)"/>` +
     `<path d="${edge}" fill="#fbf9f3"/>` +
     `<g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace" font-size="${FS}" fill="#2b2a27" xml:space="preserve" style="white-space:pre">` +
     body.join('') +
-    '</g></svg>'
-  )
+    '</g>'
+  // The shareable image: the slip centred on a dark square, the shape feeds crop to.
+  const side = Math.max(w, h) + 80
+  return backdrop
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 ${side} ${side}">` +
+        `<rect width="${side}" height="${side}" fill="#1f1e1c"/>` +
+        `<g transform="translate(${Math.round((side - w) / 2)} ${Math.round((side - h) / 2)})">${slip}</g></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h + 12}" viewBox="0 0 ${w} ${h + 12}">${slip}</svg>`
 }
 
 /** `2026-10-03-claude-mods-0042.txt`: sorts by date, says where and which. */
@@ -250,3 +278,90 @@ export const receiptFileName = (now: number, cwd: string, number: number): strin
 
 /** A Bash command that ships something: a commit or a new PR. */
 export const isShipCommand = (command: string) => /\bgit\s+commit\b|\bgh\s+pr\s+create\b/.test(command)
+
+/** One finished session, kept for `/receipt week`. */
+export type SessionSummary = {
+  at: number
+  ms: number
+  usd: number
+  turns: number
+  toolCalls: number
+  files: number
+  tokensIn: number
+  tokensOut: number
+  absolutelyRight: number
+  apologies: number
+  project: string
+  model: string | null
+  toolCounts: Record<string, number>
+}
+
+export const DAY = 86_400_000
+
+export const summarize = (s: ReceiptStats, r: Omit<ReceiptInput, 'stats' | 'sessionId' | 'number'>): SessionSummary => ({
+  at: r.now,
+  ms: r.now - r.startedAt,
+  usd: r.usd ?? 0,
+  turns: s.turns,
+  toolCalls: s.toolCalls,
+  files: Object.keys(s.editCounts).length,
+  tokensIn: s.tokensIn + s.cacheRead + s.cacheWrite,
+  tokensOut: s.tokensOut,
+  absolutelyRight: s.absolutelyRight,
+  apologies: s.apologies,
+  project: basename(r.cwd) || '~',
+  model: r.model,
+  toolCounts: s.toolCounts,
+})
+
+const top = (counts: Record<string, number>) => Object.entries(counts).sort((a, b) => b[1] - a[1])
+
+/** The last seven days as one slip, every line exactly WIDTH wide. */
+export const formatWeek = (sessions: SessionSummary[], now: number): string[] => {
+  const week = sessions.filter(x => now - x.at < 7 * DAY)
+  const lines: string[] = []
+  const push = (line: string) => lines.push(line.padEnd(WIDTH))
+  const sum = (f: (x: SessionSummary) => number) => week.reduce((n, x) => n + f(x), 0)
+  const tally = (key: (x: SessionSummary) => string | null, weight: (x: SessionSummary) => number = () => 1) => {
+    const out: Record<string, number> = {}
+    for (const x of week) {
+      const k = key(x)
+      if (k) out[k] = (out[k] ?? 0) + weight(x)
+    }
+    return out
+  }
+  const tools: Record<string, number> = {}
+  for (const x of week) for (const [t, c] of Object.entries(x.toolCounts)) tools[t] = (tools[t] ?? 0) + c
+
+  push(center('*  WEEKLY RECEIPT  *'))
+  push(center('CLAUDE CODE'))
+  push(center(`${stamp(now - 6 * DAY).slice(4, 10).trim()} - ${stamp(now).slice(4, 10).trim()}`))
+  push(RULE)
+
+  const ranked = top(tools)
+  if (ranked.length === 0) push(center('(no tools were harmed)'))
+  for (const [tool, count] of ranked.slice(0, 5)) push(row(shortTool(tool), `x${count}`))
+  push(RULE)
+
+  const busiest = top(tally(x => DAYS[new Date(x.at).getDay()] ?? null, x => x.ms))[0]
+  const project = top(tally(x => x.project, x => x.ms))[0]
+  const model = top(tally(x => (x.model ? prettyModel(x.model) : null), x => x.ms))[0]
+  push(row('SESSIONS', String(week.length)))
+  push(row('TIME', duration(sum(x => x.ms))))
+  push(row('TURNS', String(sum(x => x.turns))))
+  push(row('TOOL CALLS', String(sum(x => x.toolCalls))))
+  push(row('FILES CHANGED', String(sum(x => x.files))))
+  if (busiest) push(row('BUSIEST DAY', busiest[0]))
+  if (project) push(row('TOP PROJECT', project[0]))
+  if (model) push(row('USUAL ORDER', model[0]))
+  push(row('TOKENS IN', compact(sum(x => x.tokensIn))))
+  push(row('TOKENS OUT', compact(sum(x => x.tokensOut))))
+  push(RULE)
+  push(row('"ABSOLUTELY RIGHT"', `x${sum(x => x.absolutelyRight)}`))
+  push(row('APOLOGIES', `x${sum(x => x.apologies)}`))
+  push(DOUBLE_RULE)
+  push(row('TOTAL', `$${sum(x => x.usd).toFixed(2)}`))
+  push(DOUBLE_RULE)
+  close(push, week.length >= 20 ? 'SEE YOU TOMORROW' : 'THANK YOU, COME AGAIN', `week:${week.map(x => x.at).join(',')}`)
+  return lines
+}
