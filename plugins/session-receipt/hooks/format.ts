@@ -243,7 +243,7 @@ export const receiptSvg = (lines: string[], { backdrop = false } = {}): string =
     const style =
       i === 0 ? ' font-weight="700"'
       : isTotal(line) ? ' font-weight="700" fill="#1f7a3a"'
-      : isCredit(line) ? ` fill="#8a867c" font-size="${FS - 2}"`
+      : isCredit(line) ? ` fill="#6b675e" font-size="${FS - 2}"`
       : ''
     // Centered lines anchor on the middle; rows are stretched to the slip's
     // width, so the dot leaders line up whatever monospace the surface has.

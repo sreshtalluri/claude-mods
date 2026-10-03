@@ -2,6 +2,8 @@
 
 Claude Code mods by [@sreshtalluri](https://github.com/sreshtalluri).
 
+![session-receipt: a receipt for every Claude Code session](assets/session-receipt-hero.png)
+
 ## Install
 
 ```

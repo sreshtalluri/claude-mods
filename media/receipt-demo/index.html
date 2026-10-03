@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>session-receipt demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      body { margin: 0; background: #1f1e1c; color: #f4f1ea; font-family: system-ui, sans-serif; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden;
+        background: radial-gradient(1200px 800px at 70% 40%, #2a2926 0%, #1f1e1c 70%); }
+      .clip { position: absolute; inset: 0; }
+      @font-face { font-family: "TermMono"; src: local("SF Mono"), local("SFMono-Regular"), local("Menlo"), local("Consolas"), local("DejaVu Sans Mono"); }
+      .mono { font-family: "TermMono", monospace; }
+
+      /* Act 1: the terminal */
+      #term { position: absolute; left: 360px; top: 250px; width: 1200px; height: 520px; border-radius: 16px;
+        background: #141413; box-shadow: 0 30px 80px rgba(0,0,0,.45); overflow: hidden; }
+      #term .bar { height: 46px; background: #232220; display: flex; align-items: center; gap: 10px; padding: 0 18px; }
+      #term .dot { width: 14px; height: 14px; border-radius: 50%; background: #3d3b37; }
+      #term .name { margin-left: 16px; color: #a19d93; font-size: 20px; }
+      #term .body { padding: 30px 36px; font-size: 27px; line-height: 1.75; }
+      .dim { color: #948f85; }
+      .accent { color: #d97757; }
+      .ok { color: #7fb77e; }
+      #caret { display: inline-block; width: 15px; height: 30px; background: #f4f1ea; vertical-align: -5px; margin-left: 2px; }
+      .ch { opacity: 0; }
+
+      /* Act 2: the printer and its slip */
+      #slot { position: absolute; left: 1100px; top: 70px; width: 480px; height: 30px; border-radius: 15px;
+        background: #0f0f0e; box-shadow: inset 0 3px 6px rgba(0,0,0,.8), 0 1px 0 #3d3b37; opacity: 0; }
+      #dayWrap { position: absolute; left: 1150px; top: 86px; width: 380px; height: 900px; }
+      #day { position: absolute; left: 0; top: 0; width: 380px; }
+      .slip svg { display: block; width: 100%; height: auto; }
+      #buttons { position: absolute; left: 1150px; top: 1000px; display: flex; gap: 14px; opacity: 0; }
+      .btn { font-size: 22px; padding: 10px 20px; border-radius: 10px; background: #2d2c29; color: #e9e5dc; border: 1px solid #45433e; }
+      #imgBtn { background: #3a3935; }
+      #pointer { position: absolute; left: 0; top: 0; width: 34px; height: 46px; opacity: 0; }
+      #toast { position: absolute; right: 48px; top: 48px; font-size: 24px; padding: 16px 26px; border-radius: 12px;
+        background: #f4f1ea; color: #1f1e1c; box-shadow: 0 16px 40px rgba(0,0,0,.4); opacity: 0; }
+
+      /* Act 3: the hero */
+      #week { position: absolute; left: 1420px; top: 130px; width: 400px; opacity: 0; }
+      #copy { position: absolute; left: 130px; top: 300px; width: 820px; }
+      #title { font-size: 104px; font-weight: 800; letter-spacing: -2px; margin: 0; opacity: 0; }
+      #tagline { font-size: 40px; color: #c9c4b8; margin: 18px 0 0; opacity: 0; }
+      #install { margin-top: 56px; padding: 26px 32px; border-radius: 14px; background: #141413; border: 1px solid #34322e;
+        font-size: 25px; line-height: 1.8; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="12">
+      <section id="scene" class="clip" data-start="0" data-duration="12">
+        <div id="week" class="slip"><svg xmlns="http://www.w3.org/2000/svg" width="301" height="613" viewBox="0 0 301 613"><path d="M0 7 L6.8 0 L13.7 7 L20.5 0 L27.4 7 L34.2 0 L41 7 L47.9 0 L54.7 7 L61.6 0 L68.4 7 L75.3 0 L82.1 7 L88.9 0 L95.8 7 L102.6 0 L109.5 7 L116.3 0 L123.1 7 L130 0 L136.8 7 L143.7 0 L150.5 7 L157.3 0 L164.2 7 L171 0 L177.9 7 L184.7 0 L191.5 7 L198.4 0 L205.2 7 L212.1 0 L218.9 7 L225.8 0 L232.6 7 L239.4 0 L246.3 7 L253.1 0 L260 7 L266.8 0 L273.6 7 L280.5 0 L287.3 7 L294.2 0 L301 7 L301 594 L294.2 601 L287.3 594 L280.5 601 L273.6 594 L266.8 601 L260 594 L253.1 601 L246.3 594 L239.4 601 L232.6 594 L225.8 601 L218.9 594 L212.1 601 L205.2 594 L198.4 601 L191.5 594 L184.7 601 L177.9 594 L171 601 L164.2 594 L157.3 601 L150.5 594 L143.7 601 L136.8 594 L130 601 L123.1 594 L116.3 601 L109.5 594 L102.6 601 L95.8 594 L88.9 601 L82.1 594 L75.3 601 L68.4 594 L61.6 601 L54.7 594 L47.9 601 L41 594 L34.2 601 L27.4 594 L20.5 601 L13.7 594 L6.8 601 L0 594 Z" fill="#000" opacity="0.18" transform="translate(0 3)"/><path d="M0 7 L6.8 0 L13.7 7 L20.5 0 L27.4 7 L34.2 0 L41 7 L47.9 0 L54.7 7 L61.6 0 L68.4 7 L75.3 0 L82.1 7 L88.9 0 L95.8 7 L102.6 0 L109.5 7 L116.3 0 L123.1 7 L130 0 L136.8 7 L143.7 0 L150.5 7 L157.3 0 L164.2 7 L171 0 L177.9 7 L184.7 0 L191.5 7 L198.4 0 L205.2 7 L212.1 0 L218.9 7 L225.8 0 L232.6 7 L239.4 0 L246.3 7 L253.1 0 L260 7 L266.8 0 L273.6 7 L280.5 0 L287.3 7 L294.2 0 L301 7 L301 594 L294.2 601 L287.3 594 L280.5 601 L273.6 594 L266.8 601 L260 594 L253.1 601 L246.3 594 L239.4 601 L232.6 594 L225.8 601 L218.9 594 L212.1 601 L205.2 594 L198.4 601 L191.5 594 L184.7 601 L177.9 594 L171 601 L164.2 594 L157.3 601 L150.5 594 L143.7 601 L136.8 594 L130 601 L123.1 594 L116.3 601 L109.5 594 L102.6 601 L95.8 594 L88.9 601 L82.1 594 L75.3 601 L68.4 594 L61.6 601 L54.7 594 L47.9 601 L41 594 L34.2 601 L27.4 594 L20.5 601 L13.7 594 L6.8 601 L0 594 Z" fill="#fbf9f3"/><g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace" font-size="13" fill="#2b2a27" xml:space="preserve" style="white-space:pre"><text data-layout-allow-overlap x="150.5" y="38" text-anchor="middle" font-weight="700">*  WEEKLY RECEIPT  *</text><text data-layout-allow-overlap x="150.5" y="57" text-anchor="middle">CLAUDE CODE</text><text data-layout-allow-overlap x="150.5" y="76" text-anchor="middle">SEP 27 - OCT 3</text><line x1="18" x2="283" y1="91.5" y2="91.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="114" textLength="265.2" lengthAdjust="spacingAndGlyphs">Read ........................ x126</text><text data-layout-allow-overlap x="18" y="133" textLength="265.2" lengthAdjust="spacingAndGlyphs">Bash ........................ x102</text><text data-layout-allow-overlap x="18" y="152" textLength="265.2" lengthAdjust="spacingAndGlyphs">Edit ......................... x72</text><text data-layout-allow-overlap x="18" y="171" textLength="265.2" lengthAdjust="spacingAndGlyphs">Grep ......................... x48</text><text data-layout-allow-overlap x="18" y="190" textLength="265.2" lengthAdjust="spacingAndGlyphs">Write ........................ x30</text><line x1="18" x2="283" y1="205.5" y2="205.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="228" textLength="265.2" lengthAdjust="spacingAndGlyphs">SESSIONS ....................... 6</text><text data-layout-allow-overlap x="18" y="247" textLength="265.2" lengthAdjust="spacingAndGlyphs">TIME ....................... 6h 0m</text><text data-layout-allow-overlap x="18" y="266" textLength="265.2" lengthAdjust="spacingAndGlyphs">TURNS ......................... 84</text><text data-layout-allow-overlap x="18" y="285" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOOL CALLS ................... 378</text><text data-layout-allow-overlap x="18" y="304" textLength="265.2" lengthAdjust="spacingAndGlyphs">FILES CHANGED ................. 12</text><text data-layout-allow-overlap x="18" y="323" textLength="265.2" lengthAdjust="spacingAndGlyphs">BUSIEST DAY .................. THU</text><text data-layout-allow-overlap x="18" y="342" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOP PROJECT ............. trividha</text><text data-layout-allow-overlap x="18" y="361" textLength="265.2" lengthAdjust="spacingAndGlyphs">USUAL ORDER ............. OPUS 5.5</text><text data-layout-allow-overlap x="18" y="380" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOKENS IN .................... 19M</text><text data-layout-allow-overlap x="18" y="399" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOKENS OUT .................. 312k</text><line x1="18" x2="283" y1="414.5" y2="414.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="437" textLength="265.2" lengthAdjust="spacingAndGlyphs">&quot;ABSOLUTELY RIGHT&quot; ........... x12</text><text data-layout-allow-overlap x="18" y="456" textLength="265.2" lengthAdjust="spacingAndGlyphs">APOLOGIES ..................... x6</text><line x1="18" x2="283" y1="469.5" y2="469.5" stroke="#2b2a27"/><line x1="18" x2="283" y1="473.5" y2="473.5" stroke="#2b2a27"/><text data-layout-allow-overlap x="18" y="494" textLength="265.2" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#1f7a3a">TOTAL ..................... $33.00</text><line x1="18" x2="283" y1="507.5" y2="507.5" stroke="#2b2a27"/><line x1="18" x2="283" y1="511.5" y2="511.5" stroke="#2b2a27"/><text data-layout-allow-overlap x="150.5" y="532" text-anchor="middle">THANK YOU, COME AGAIN</text><rect x="33.6" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="41.4" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="49.2" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="57.0" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="64.8" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="80.4" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="96.0" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="103.8" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="111.6" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="119.4" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="127.2" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="135.0" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="142.8" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="174.0" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="189.6" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="205.2" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="220.8" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="228.6" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="244.2" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="252.0" y="536" width="4.3" height="20" fill="#2b2a27"/><rect x="259.8" y="536" width="4.3" height="20" fill="#2b2a27"/><text data-layout-allow-overlap x="150.5" y="570" text-anchor="middle" fill="#6b675e" font-size="11">sreshtalluri/claude-mods</text></g></svg></div>
+
+        <div id="term">
+          <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="name mono">claude — ~/trividha</span></div>
+          <div class="body mono">
+            <div class="dim">&gt; fix the unread badge in the inbox and open a PR</div>
+            <div><span class="accent">⏺</span> Updated app/inbox.tsx and api/messages.py</div>
+            <div><span class="accent">⏺</span> <span class="ok">Tests pass.</span> Opened PR #42.</div>
+            <div>&nbsp;</div>
+            <div>&gt; <span class="ch">/</span><span class="ch">r</span><span class="ch">e</span><span class="ch">c</span><span class="ch">e</span><span class="ch">i</span><span class="ch">p</span><span class="ch">t</span><span id="caret"></span></div>
+          </div>
+        </div>
+
+        <div id="slot"></div>
+        <div id="dayWrap"><div id="day" class="slip"><svg xmlns="http://www.w3.org/2000/svg" width="301" height="689" viewBox="0 0 301 689"><path d="M0 7 L6.8 0 L13.7 7 L20.5 0 L27.4 7 L34.2 0 L41 7 L47.9 0 L54.7 7 L61.6 0 L68.4 7 L75.3 0 L82.1 7 L88.9 0 L95.8 7 L102.6 0 L109.5 7 L116.3 0 L123.1 7 L130 0 L136.8 7 L143.7 0 L150.5 7 L157.3 0 L164.2 7 L171 0 L177.9 7 L184.7 0 L191.5 7 L198.4 0 L205.2 7 L212.1 0 L218.9 7 L225.8 0 L232.6 7 L239.4 0 L246.3 7 L253.1 0 L260 7 L266.8 0 L273.6 7 L280.5 0 L287.3 7 L294.2 0 L301 7 L301 670 L294.2 677 L287.3 670 L280.5 677 L273.6 670 L266.8 677 L260 670 L253.1 677 L246.3 670 L239.4 677 L232.6 670 L225.8 677 L218.9 670 L212.1 677 L205.2 670 L198.4 677 L191.5 670 L184.7 677 L177.9 670 L171 677 L164.2 670 L157.3 677 L150.5 670 L143.7 677 L136.8 670 L130 677 L123.1 670 L116.3 677 L109.5 670 L102.6 677 L95.8 670 L88.9 677 L82.1 670 L75.3 677 L68.4 670 L61.6 677 L54.7 670 L47.9 677 L41 670 L34.2 677 L27.4 670 L20.5 677 L13.7 670 L6.8 677 L0 670 Z" fill="#000" opacity="0.18" transform="translate(0 3)"/><path d="M0 7 L6.8 0 L13.7 7 L20.5 0 L27.4 7 L34.2 0 L41 7 L47.9 0 L54.7 7 L61.6 0 L68.4 7 L75.3 0 L82.1 7 L88.9 0 L95.8 7 L102.6 0 L109.5 7 L116.3 0 L123.1 7 L130 0 L136.8 7 L143.7 0 L150.5 7 L157.3 0 L164.2 7 L171 0 L177.9 7 L184.7 0 L191.5 7 L198.4 0 L205.2 7 L212.1 0 L218.9 7 L225.8 0 L232.6 7 L239.4 0 L246.3 7 L253.1 0 L260 7 L266.8 0 L273.6 7 L280.5 0 L287.3 7 L294.2 0 L301 7 L301 670 L294.2 677 L287.3 670 L280.5 677 L273.6 670 L266.8 677 L260 670 L253.1 677 L246.3 670 L239.4 677 L232.6 670 L225.8 677 L218.9 670 L212.1 677 L205.2 670 L198.4 677 L191.5 670 L184.7 677 L177.9 670 L171 677 L164.2 670 L157.3 677 L150.5 670 L143.7 677 L136.8 670 L130 677 L123.1 670 L116.3 677 L109.5 670 L102.6 677 L95.8 670 L88.9 677 L82.1 670 L75.3 677 L68.4 670 L61.6 677 L54.7 670 L47.9 677 L41 670 L34.2 677 L27.4 670 L20.5 677 L13.7 670 L6.8 677 L0 670 Z" fill="#fbf9f3"/><g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace" font-size="13" fill="#2b2a27" xml:space="preserve" style="white-space:pre"><text data-layout-allow-overlap x="150.5" y="38" text-anchor="middle" font-weight="700">*  SESSION RECEIPT  *</text><text data-layout-allow-overlap x="150.5" y="57" text-anchor="middle">CLAUDE CODE</text><text data-layout-allow-overlap x="150.5" y="76" text-anchor="middle">RECEIPT #0037</text><text data-layout-allow-overlap x="150.5" y="95" text-anchor="middle">SAT OCT 3 2026  4:42 PM</text><text data-layout-allow-overlap x="150.5" y="114" text-anchor="middle">trividha</text><text data-layout-allow-overlap x="150.5" y="133" text-anchor="middle">SERVED BY OPUS 5.5</text><line x1="18" x2="283" y1="148.5" y2="148.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="171" textLength="265.2" lengthAdjust="spacingAndGlyphs">Read ......................... x21</text><text data-layout-allow-overlap x="18" y="190" textLength="265.2" lengthAdjust="spacingAndGlyphs">Bash ......................... x17</text><text data-layout-allow-overlap x="18" y="209" textLength="265.2" lengthAdjust="spacingAndGlyphs">Edit ......................... x12</text><text data-layout-allow-overlap x="18" y="228" textLength="265.2" lengthAdjust="spacingAndGlyphs">Grep .......................... x8</text><text data-layout-allow-overlap x="18" y="247" textLength="265.2" lengthAdjust="spacingAndGlyphs">Write ......................... x5</text><line x1="18" x2="283" y1="262.5" y2="262.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="285" textLength="265.2" lengthAdjust="spacingAndGlyphs">TIME ...................... 1h 30m</text><text data-layout-allow-overlap x="18" y="304" textLength="265.2" lengthAdjust="spacingAndGlyphs">TURNS ......................... 14</text><text data-layout-allow-overlap x="18" y="323" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOOL CALLS .................... 63</text><text data-layout-allow-overlap x="18" y="342" textLength="265.2" lengthAdjust="spacingAndGlyphs">FILES CHANGED .................. 2</text><text data-layout-allow-overlap x="18" y="361" textLength="265.2" lengthAdjust="spacingAndGlyphs">MOST EDITED ......... inbox.tsx x7</text><text data-layout-allow-overlap x="18" y="380" textLength="265.2" lengthAdjust="spacingAndGlyphs">LONGEST WAIT ............ Bash 41s</text><text data-layout-allow-overlap x="18" y="399" textLength="265.2" lengthAdjust="spacingAndGlyphs">FAILED CALLS ................... 0</text><text data-layout-allow-overlap x="18" y="418" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOKENS IN ................... 3.2M</text><text data-layout-allow-overlap x="18" y="437" textLength="265.2" lengthAdjust="spacingAndGlyphs">TOKENS OUT ................... 52k</text><text data-layout-allow-overlap x="18" y="456" textLength="265.2" lengthAdjust="spacingAndGlyphs">CACHE HIT .................... 97%</text><line x1="18" x2="283" y1="471.5" y2="471.5" stroke="#9a968c" stroke-dasharray="4 3"/><text data-layout-allow-overlap x="18" y="494" textLength="265.2" lengthAdjust="spacingAndGlyphs">&quot;ABSOLUTELY RIGHT&quot; ............ x2</text><text data-layout-allow-overlap x="18" y="513" textLength="265.2" lengthAdjust="spacingAndGlyphs">APOLOGIES ..................... x1</text><text data-layout-allow-overlap x="18" y="532" textLength="265.2" lengthAdjust="spacingAndGlyphs">INTERRUPTIONS ................. x1</text><line x1="18" x2="283" y1="545.5" y2="545.5" stroke="#2b2a27"/><line x1="18" x2="283" y1="549.5" y2="549.5" stroke="#2b2a27"/><text data-layout-allow-overlap x="18" y="570" textLength="265.2" lengthAdjust="spacingAndGlyphs" font-weight="700" fill="#1f7a3a">TOTAL ...................... $6.42</text><line x1="18" x2="283" y1="583.5" y2="583.5" stroke="#2b2a27"/><line x1="18" x2="283" y1="587.5" y2="587.5" stroke="#2b2a27"/><text data-layout-allow-overlap x="150.5" y="608" text-anchor="middle">THANK YOU, COME AGAIN</text><rect x="33.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="41.4" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="49.2" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="57.0" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="72.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="80.4" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="88.2" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="96.0" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="111.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="119.4" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="127.2" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="150.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="158.4" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="181.8" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="189.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="213.0" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="228.6" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="236.4" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="244.2" y="612" width="4.3" height="20" fill="#2b2a27"/><rect x="252.0" y="612" width="4.3" height="20" fill="#2b2a27"/><text data-layout-allow-overlap x="150.5" y="646" text-anchor="middle" fill="#6b675e" font-size="11">sreshtalluri/claude-mods</text></g></svg></div></div>
+        <div id="buttons"><span class="btn">Copy text</span><span id="imgBtn" class="btn">Copy image</span></div>
+        <div id="toast">Receipt image copied</div>
+
+        <div id="copy">
+          <h1 id="title">session-receipt</h1>
+          <p id="tagline">A receipt for every Claude Code session.</p>
+          <div id="install" class="mono">
+            <div><span class="dim">&gt;</span> /plugin marketplace add sreshtalluri/claude-mods</div>
+            <div><span class="dim">&gt;</span> /plugin install session-receipt@claude-mods</div>
+          </div>
+        </div>
+
+        <svg id="pointer" viewBox="0 0 34 46"><path d="M3 2 L3 38 L12 30 L18 44 L24 41 L18 28 L30 28 Z" fill="#fff" stroke="#111" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      </section>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+
+      // Act 1: the task finishes, /receipt is typed.
+      tl.fromTo("#term", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0);
+      tl.to(".ch", { opacity: 1, duration: 0.01, stagger: 0.09 }, 0.7);
+      tl.fromTo("#caret", { opacity: 1 }, { opacity: 0, duration: 0.3, repeat: 5, yoyo: true, ease: "steps(1)" }, 0.2);
+
+      // Act 2: Enter; the terminal steps aside and the slip feeds out of the slot.
+      tl.to("#term", { x: -300, scale: 0.82, opacity: 0.5, duration: 0.7, ease: "power2.inOut" }, 1.9);
+      tl.to("#slot", { opacity: 1, duration: 0.4 }, 2.0);
+      tl.fromTo("#day", { clipPath: "inset(0% 0% 100% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 2.8, ease: "none" }, 2.3);
+      tl.to("#buttons", { opacity: 1, duration: 0.4 }, 5.0);
+
+      // The cursor presses Copy image; the toast says it worked.
+      tl.fromTo("#pointer", { x: 900, y: 760, opacity: 0 }, { x: 1345, y: 1015, opacity: 1, duration: 0.8, ease: "power2.inOut" }, 5.1);
+      tl.to("#pointer", { scale: 0.85, duration: 0.08, yoyo: true, repeat: 1 }, 5.95);
+      tl.set("#imgBtn", { backgroundColor: "#d97757", color: "#141413" }, 5.95);
+      tl.fromTo("#toast", { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "back.out(2)" }, 6.1);
+
+      // Act 3: everything else clears; the slips settle into the hero.
+      tl.to(["#term", "#buttons", "#pointer", "#slot", "#toast"], { opacity: 0, duration: 0.5 }, 7.2);
+      tl.to("#dayWrap", { x: -120, y: 30, rotation: -3, duration: 1.1, ease: "power3.inOut" }, 7.3);
+      tl.fromTo("#week", { x: 520, rotation: 14, opacity: 0 }, { x: 0, rotation: 6, opacity: 1, duration: 1.1, ease: "power3.out" }, 7.6);
+      tl.fromTo("#title", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 8.0);
+      tl.fromTo("#tagline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 8.25);
+      tl.fromTo("#install", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, 8.5);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
