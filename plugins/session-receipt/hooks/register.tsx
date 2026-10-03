@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { ButtonProps, EngineInterface, Register } from 'claude-code'
 
 import type { ReceiptLifetime, ReceiptStats } from '../types'
 import {
@@ -8,11 +8,18 @@ import {
   emptyStats,
   formatReceipt,
   isRule,
+  isShipCommand,
   isTotal,
+  receiptFileName,
+  receiptSvg,
+  slipLines,
 } from './format'
 
 const stats = atom({ plugin: 'session-receipt', key: 'stats' } as const, emptyStats())
 const LIFETIME = 'lifetime'
+/** The last saved receipt: `{ lines, path, seen }`, for `/receipt last` and the next start's toast. */
+const LAST = 'last'
+type LastReceipt = { lines: string[]; path: string; seen: boolean }
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 /** Never let bookkeeping break the session: a failed write just loses a stat. */
@@ -44,11 +51,21 @@ const buildReceipt = async ($: EngineInterface): Promise<string[]> => {
 }
 
 export const register: Register = on => {
+  // ponytail: module-level, so a reload can toast once more; fine for a nudge.
+  let shipToasted = false
+
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'receipt',
       description: 'Print a receipt for this session (tokens, cost, tools, files)',
+      argumentHint: '[last]',
     })
+    const last = (await $.store.get(LAST)) as LastReceipt | undefined
+    if (last && !last.seen) {
+      const total = last.lines.find(isTotal)?.replace(/^TOTAL[ .]*/, '').trim()
+      $.ui.toast(`🧾 Last session's receipt${total ? ` (${total})` : ''}: /receipt last`, { timeoutMs: 8000 })
+      await $.store.set(LAST, { ...last, seen: true })
+    }
     return next(e)
   })
 
@@ -72,6 +89,14 @@ export const register: Register = on => {
       longest: !s.longest || ms > s.longest.ms ? { tool, ms } : s.longest,
     }))
 
+    if (!shipToasted && tool === 'Bash' && !ran.isError && ran.deny === undefined) {
+      const command = (e as { command?: unknown }).command
+      if (typeof command === 'string' && isShipCommand(command)) {
+        shipToasted = true
+        $.ui.toast('🧾 Shipped! /receipt for the tab')
+      }
+    }
+
     return ran
   })
 
@@ -94,7 +119,12 @@ export const register: Register = on => {
     return next(e)
   })
 
-  on('command.run', { command: 'receipt' }, async $ => {
+  on('command.run', { command: 'receipt' }, async ($, e) => {
+    if (e.args.trim() === 'last') {
+      const last = (await $.store.get(LAST)) as LastReceipt | undefined
+      if (!last) return { text: 'No saved receipt yet: one is saved when a session ends.' }
+      return { text: '```\n' + last.lines.join('\n') + '\n```\n' + last.path }
+    }
     const lines = await buildReceipt($)
     return { text: '```\n' + lines.join('\n') + '\n```' }
   })
@@ -102,14 +132,27 @@ export const register: Register = on => {
   // Draw the receipt as a bordered slip instead of a plain code block.
   on('ui.render', { component: 'CommandOutput', props: { command: 'receipt' } }, async ($, e, next) => {
     if (e.props.isErrored) return next(e)
-    const lines = e.props.text
-      .split('\n')
-      .filter(line => !line.startsWith('```'))
+    const lines = slipLines(e.props.text)
     if (lines.length < 5) return next(e)
-
-    const { Box, Text, Button } = $.ui.resolve(e)
     const plain = lines.join('\n')
 
+    const copy: ButtonProps['onPress'] = press => {
+      void $.ui.copy({ text: plain, surface: press.surface })
+      $.ui.toast('Receipt copied')
+    }
+
+    if (e.surface !== 'terminal') {
+      // Proportional-font surfaces: draw a paper slip instead of padded text.
+      const { Box, Svg, Button } = $.ui.resolve(e)
+      return (
+        <Box flexDirection="column" alignItems="flex-start" gap={1}>
+          <Svg key="slip" source={receiptSvg(lines)} alt={plain} />
+          <Button key="copy" label="Copy receipt" onPress={copy} />
+        </Box>
+      )
+    }
+
+    const { Box, Text, Button } = $.ui.resolve(e)
     return (
       <Box flexDirection="column" alignItems="flex-start">
         <Box key="slip" flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
@@ -127,26 +170,28 @@ export const register: Register = on => {
             ),
           )}
         </Box>
-        <Button
-          key="copy"
-          label="Copy receipt"
-          onPress={press => {
-            void $.ui.copy({ text: plain, surface: press.surface })
-            $.ui.toast('Receipt copied')
-          }}
-        />
+        <Button key="copy" label="Copy receipt" onPress={copy} />
       </Box>
     )
   })
 
   on('session.end', async ($, e, next) => {
     try {
-      const usage = await $.session.usage()
-      const lifetime = await readLifetime($)
-      await $.store.set(LIFETIME, {
-        sessions: lifetime.sessions + 1,
-        usd: lifetime.usd + (usage.cost?.usd ?? 0),
-      })
+      const s = await read($, stats)
+      // An opened-and-closed session gets no receipt and no number.
+      if (s.turns > 0 || s.toolCalls > 0) {
+        const usage = await $.session.usage()
+        const lifetime = await readLifetime($)
+        const lines = await buildReceipt($)
+        const home = (await $.env.get('HOME')) ?? '~'
+        const path = `${home}/.claude/receipts/${receiptFileName(await $.clock.now(), await $.session.cwd(), lifetime.sessions + 1)}`
+        await $.store.set(LIFETIME, {
+          sessions: lifetime.sessions + 1,
+          usd: lifetime.usd + (usage.cost?.usd ?? 0),
+        })
+        await $.store.set(LAST, { lines, path, seen: false } satisfies LastReceipt)
+        await $.fs.write(path, lines.join('\n') + '\n')
+      }
       if (e.reason === 'clear') await update($, stats, () => emptyStats())
     } catch {
       // best effort inside session.end's short budget

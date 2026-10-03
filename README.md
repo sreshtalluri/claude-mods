@@ -13,7 +13,7 @@ Claude Code mods by [@sreshtalluri](https://github.com/sreshtalluri).
 
 | Mod | What it does |
 | --- | --- |
-| [session-receipt](plugins/session-receipt) | `/receipt` prints a shareable receipt of your session: tokens, cost, tools, files, and a few silly stats. |
+| [session-receipt](plugins/session-receipt) | `/receipt` prints a shareable receipt of your session: tokens, cost, tools, files, and a few silly stats. Each session's receipt is saved to `~/.claude/receipts/` when it ends; `/receipt last` shows the previous one. |
 
 ## Adding a mod
 

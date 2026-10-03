@@ -174,3 +174,79 @@ export const formatReceipt = (r: ReceiptInput): string[] => {
 /** Lines the drawing styles differently, by exact content. */
 export const isRule = (line: string) => line === RULE || line === DOUBLE_RULE
 export const isTotal = (line: string) => line.startsWith('TOTAL')
+
+/** The receipt's lines out of a CommandOutput row: what sits between the ``` fences. */
+export const slipLines = (text: string): string[] => {
+  const lines = text.split('\n')
+  const open = lines.findIndex(l => l.includes('```'))
+  const close = lines.findLastIndex(l => l.includes('```'))
+  return close > open && open >= 0 ? lines.slice(open + 1, close) : lines
+}
+
+const xml = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+/**
+ * The receipt as a paper slip for surfaces that draw SVG (desktop, mobile).
+ * Rules and the barcode are drawn as shapes, so only the text depends on the
+ * font being monospace.
+ */
+export const receiptSvg = (lines: string[]): string => {
+  const FS = 13
+  const CW = FS * 0.6 // monospace advance
+  const LH = 19
+  const PAD = 18
+  const TOOTH = 7
+  const w = Math.round(PAD * 2 + WIDTH * CW)
+  const bodyH = PAD * 2 + lines.length * LH
+  const h = bodyH + TOOTH * 2
+
+  // Torn edges: a zigzag along the top and bottom.
+  const teeth = Math.round(w / (TOOTH * 2))
+  const step = w / teeth
+  const f = (n: number) => +n.toFixed(1)
+  let edge = `M0 ${TOOTH}`
+  for (let i = 0; i < teeth; i++) edge += ` L${f((i + 0.5) * step)} 0 L${f((i + 1) * step)} ${TOOTH}`
+  edge += ` L${w} ${h - TOOTH}`
+  for (let i = teeth; i > 0; i--) edge += ` L${f((i - 0.5) * step)} ${h} L${f((i - 1) * step)} ${h - TOOTH}`
+  edge += ' Z'
+
+  const body = lines.map((line, i) => {
+    const y = TOOTH + PAD + i * LH
+    const mid = y + LH / 2
+    if (line === RULE) return `<line x1="${PAD}" x2="${w - PAD}" y1="${mid}" y2="${mid}" stroke="#9a968c" stroke-dasharray="4 3"/>`
+    if (line === DOUBLE_RULE)
+      return `<line x1="${PAD}" x2="${w - PAD}" y1="${mid - 2}" y2="${mid - 2}" stroke="#2b2a27"/><line x1="${PAD}" x2="${w - PAD}" y1="${mid + 2}" y2="${mid + 2}" stroke="#2b2a27"/>`
+    if (i === lines.length - 1 && /^[| ]+$/.test(line))
+      return [...line]
+        .map((c, j) => (c === '|' ? `<rect x="${(PAD + j * CW).toFixed(1)}" y="${y + 1}" width="${(CW * 0.55).toFixed(1)}" height="${LH + 10}" fill="#2b2a27"/>` : ''))
+        .join('')
+    const style = i === 0 ? ' font-weight="700"' : isTotal(line) ? ' font-weight="700" fill="#1f7a3a"' : ''
+    // Centered lines anchor on the middle; rows are stretched to the slip's
+    // width, so the dot leaders line up whatever monospace the surface has.
+    const text = line.trimEnd()
+    return line.startsWith(' ')
+      ? `<text x="${w / 2}" y="${y + FS}" text-anchor="middle"${style}>${xml(text.trim())}</text>`
+      : `<text x="${PAD}" y="${y + FS}" textLength="${(text.length * CW).toFixed(1)}" lengthAdjust="spacingAndGlyphs"${style}>${xml(text)}</text>`
+  })
+
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h + 12}" viewBox="0 0 ${w} ${h + 12}">` +
+    `<path d="${edge}" fill="#000" opacity="0.18" transform="translate(0 3)"/>` +
+    `<path d="${edge}" fill="#fbf9f3"/>` +
+    `<g font-family="ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New', monospace" font-size="${FS}" fill="#2b2a27" xml:space="preserve" style="white-space:pre">` +
+    body.join('') +
+    '</g></svg>'
+  )
+}
+
+/** `2026-10-03-claude-mods-0042.txt`: sorts by date, says where and which. */
+export const receiptFileName = (now: number, cwd: string, number: number): string => {
+  const d = new Date(now)
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const project = (basename(cwd) || 'home').replace(/[^\w.-]+/g, '_')
+  return `${date}-${project}-${String(number).padStart(4, '0')}.txt`
+}
+
+/** A Bash command that ships something: a commit or a new PR. */
+export const isShipCommand = (command: string) => /\bgit\s+commit\b|\bgh\s+pr\s+create\b/.test(command)
