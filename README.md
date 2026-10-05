@@ -9,6 +9,7 @@ Claude Code mods by [@sreshtalluri](https://github.com/sreshtalluri).
 ```
 /plugin marketplace add sreshtalluri/claude-mods
 /plugin install session-receipt@claude-mods
+/plugin install daily-grind@claude-mods
 ```
 
 Mods use Claude Code's function-hooks plugin API, which is early access, so you need a current Claude Code.
@@ -18,6 +19,7 @@ Mods use Claude Code's function-hooks plugin API, which is early access, so you 
 | Mod | What it does |
 | --- | --- |
 | [session-receipt](#session-receipt) | `/receipt` prints a shareable receipt of your session. `/receipt week` totals your week. **Copy image** gives you a square PNG to post. |
+| [daily-grind](plugins/daily-grind) | `/grind` opens a hub of daily puzzles to play while Claude works. **Developer:** Git Golf (reshape a commit graph under par), Heisenbug (find the buggy line), Install Order (dependency logic). **Everyone:** Ladder, Pixel Logic, Codebreaker. A **Classics** tab holds Lexer, Buckets and Daemons. Streaks, and `/grind share` for a shareable result. |
 
 ### session-receipt
 

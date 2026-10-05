@@ -2,3 +2,5 @@
 node_modules/
 .claude/types/
 plugins/*/.claude-plugin/types/
+.scratch/
+archive/*/.claude-plugin/types/

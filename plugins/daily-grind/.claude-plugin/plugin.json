@@ -1,0 +1,12 @@
+{
+  "name": "daily-grind",
+  "version": "0.1.0",
+  "description": "Daily puzzles to play while Claude works, in two shelves: Developer (word guess, grouping) and Everyone (logic grid).",
+  "author": {
+    "name": "Sreshta Talluri",
+    "url": "https://github.com/sreshtalluri"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "homepage": "https://github.com/sreshtalluri/claude-mods"
+}
