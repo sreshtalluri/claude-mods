@@ -19,6 +19,12 @@
       "source": "./plugins/daily-grind",
       "description": "Three daily developer puzzles to play while Claude works: a five-letter word guess, a grouping puzzle and a logic grid.",
       "version": "0.1.0"
+    },
+    {
+      "name": "next-asks",
+      "source": "./plugins/next-asks",
+      "description": "After each turn, a band above the prompt suggests a few things worth asking Claude next that you might not think of.",
+      "version": "0.1.0"
     }
   ]
 }
