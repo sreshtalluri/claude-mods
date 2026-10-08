@@ -31,6 +31,11 @@ test('parseIdeas strips numbering, bullets and quotes, keeps three', async () =>
   expect(parseIdeas('  none \n')).toEqual([])
 })
 
+test('parseIdeas drops a line too long to be an ask', async () => {
+  const narration = `Two things look worth raising here. ${'The agent offered to add a hook. '.repeat(3)}`
+  expect(parseIdeas(`${narration}\nShow me the SKILL.md for both skills`)).toEqual(['Show me the SKILL.md for both skills'])
+})
+
 test('hangingWrap breaks on words and indents continuation lines by the hotkey prefix', async () => {
   expect(hangingWrap('Add tests for power covering zero and negatives', 20)).toBe(
     'Add tests for power\n   covering zero and\n   negatives',
