@@ -1,6 +1,8 @@
 import type { SessionMessage } from 'claude-code'
 
 export const MAX_IDEAS = 3
+/** The prompt asks for under 90; past this a line is narration, not an ask, and a desktop would cut it off. */
+const MAX_IDEA_CHARS = 100
 /** How much of the conversation's tail Haiku reads: enough for the current task, cheap per turn. */
 const TAIL_CHARS = 12_000
 
@@ -44,12 +46,12 @@ export const hangingWrap = (text: string, width: number): string => {
   return lines.join(`\n${' '.repeat(HOTKEY_PREFIX)}`)
 }
 
-/** Haiku's reply as at most `MAX_IDEAS` clean one-line asks. */
+/** Haiku's reply as at most `MAX_IDEAS` clean one-line asks, dropping any too long to read at a glance. */
 export const parseIdeas = (reply: string): string[] => {
   if (/^\s*NONE\s*$/i.test(reply)) return []
   return reply
     .split('\n')
     .map(l => l.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').replace(/^["“]|["”]$/g, '').trim())
-    .filter(l => l !== '' && !/^NONE$/i.test(l))
+    .filter(l => l !== '' && l.length <= MAX_IDEA_CHARS && !/^NONE$/i.test(l))
     .slice(0, MAX_IDEAS)
 }
