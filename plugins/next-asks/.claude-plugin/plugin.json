@@ -1,0 +1,12 @@
+{
+  "name": "next-asks",
+  "version": "0.1.0",
+  "description": "After each turn, a band above the prompt suggests a few things worth asking Claude next that you might not think of.",
+  "author": {
+    "name": "Sreshta Talluri",
+    "url": "https://github.com/sreshtalluri"
+  },
+  "types": "./types/index.d.ts",
+  "license": "MIT",
+  "homepage": "https://github.com/sreshtalluri/claude-mods"
+}
