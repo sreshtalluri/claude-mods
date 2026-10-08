@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { parseIdeas, transcript } from '../hooks/suggest'
+import { hangingWrap, parseIdeas, transcript } from '../hooks/suggest'
 
 /** The engine's own answers beneath the plugin: an empty band, a plain turn end, the prompt as typed. */
 const engine = (on: On) => {
@@ -29,6 +29,15 @@ test('parseIdeas strips numbering, bullets and quotes, keeps three', async () =>
   ])
   expect(parseIdeas('NONE')).toEqual([])
   expect(parseIdeas('  none \n')).toEqual([])
+})
+
+test('hangingWrap breaks on words and indents continuation lines by the hotkey prefix', async () => {
+  expect(hangingWrap('Add tests for power covering zero and negatives', 20)).toBe(
+    'Add tests for power\n   covering zero and\n   negatives',
+  )
+  expect(hangingWrap('short one', 20)).toBe('short one')
+  // A word longer than the width stays whole on its own line.
+  expect(hangingWrap('see supercalifragilistic', 10)).toBe('see\n   supercalifragilistic')
 })
 
 test('transcript labels roles, lists tools and keeps the tail', async () => {

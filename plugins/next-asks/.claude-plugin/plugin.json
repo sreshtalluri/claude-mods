@@ -1,6 +1,6 @@
 {
   "name": "next-asks",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "After each turn, a band above the prompt suggests a few things worth asking Claude next that you might not think of.",
   "author": {
     "name": "Sreshta Talluri",
