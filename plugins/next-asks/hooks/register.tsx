@@ -5,6 +5,12 @@ import { hangingWrap, HOTKEY_PREFIX, parseIdeas, SYSTEM, transcript } from './su
 
 const ideas = atom({ plugin: 'next-asks', key: 'ideas' } as const, [] as string[])
 const isHidden = atom({ plugin: 'next-asks', key: 'isHidden' } as const, false)
+/** True while the draft opens a `/` command or `@` mention, whose picker draws above the band. */
+const isSearching = atom({ plugin: 'next-asks', key: 'isSearching' } as const, false)
+
+const setSearching = async ($: EngineInterface, value: boolean) => {
+  if ((await read($, isSearching)) !== value) await update($, isSearching, () => value)
+}
 
 /** Asks Haiku for follow-ups over the conversation's tail; a failed call just leaves the band empty. */
 const refresh = async ($: EngineInterface) => {
@@ -25,7 +31,15 @@ export const register: Register = on => {
   // A new prompt makes the last turn's ideas stale.
   on('prompt.submit', async ($, e, next) => {
     await update($, ideas, () => [])
+    await setSearching($, false)
     return next(e)
+  })
+
+  // Step aside while the person searches commands, skills or files, so the picker sits by the input.
+  on('prompt.edit', async ($, e, next) => {
+    const box = await next(e)
+    await setSearching($, /^\s*[/@]/.test(box.text))
+    return box
   })
 
   on('turn.complete', async ($, e, next) => {
@@ -39,7 +53,8 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const list = await read($, ideas)
-    if (e.props.hasSurvey || e.props.isWorking || list.length === 0 || (await read($, isHidden))) {
+    const isQuiet = e.props.hasSurvey || e.props.isWorking || list.length === 0
+    if (isQuiet || (await read($, isHidden)) || (await read($, isSearching))) {
       return next(e)
     }
 
