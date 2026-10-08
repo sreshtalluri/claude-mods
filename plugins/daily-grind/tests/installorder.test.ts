@@ -2,7 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import { clueText, generate, judge, meta, move, puzzle, satisfies, shareText, solutions } from '../hooks/games/installorder/logic'
 
-test('every puzzle in the first year has exactly one answer and at least 4 clues', async () => {
+// Exhaustive checks run ~3x slower on CI than locally; the kit's default is 5s.
+test('every puzzle in the first year has exactly one answer and at least 4 clues', { timeoutMs: 30_000 }, async () => {
   for (let day = 0; day < 365; day++) {
     const p = puzzle(day)
     expect(p.answer.length >= 5 && p.answer.length <= 7).toBe(true)

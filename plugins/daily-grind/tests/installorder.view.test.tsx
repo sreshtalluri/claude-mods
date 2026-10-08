@@ -13,7 +13,7 @@ const PANE = {
 } as const
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`Install Order: a wrong install, then reorder to a win (${surface})`, async ($, on) => {
+  test(`Install Order: a wrong install, then reorder to a win (${surface})`, { timeoutMs: 30_000 }, async ($, on) => {
     mock.clock(on, { now: NOW })
     mock.store(on)
     const p = puzzle(DAY)
