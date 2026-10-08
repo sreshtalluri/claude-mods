@@ -45,10 +45,19 @@ export const register: Register = on => {
 
     const { Box, Button, Text } = $.ui.resolve(e)
 
+    // Theme keys, not hex, so the box follows the person's light or dark theme on every surface.
     return (
-      <Box flexDirection="column" width={e.props.bodyColumns}>
-        <Box>
-          <Text dimColor>Worth asking next · </Text>
+      <Box
+        flexDirection="column"
+        width={e.props.bodyColumns}
+        borderStyle="round"
+        borderColor="suggestion"
+        paddingX={1}
+      >
+        <Box justifyContent="space-between">
+          <Text color="claude" bold>
+            ✦ Worth asking next
+          </Text>
           <Button key="hide" label="hide" plain dimColor onPress={() => update($, isHidden, () => true)} />
         </Box>
         {list.map((idea, i) => (
