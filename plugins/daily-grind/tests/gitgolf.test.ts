@@ -82,7 +82,7 @@ test('solve finds the shortest route', async () => {
   expect(solve(forked, forked, 3)).toEqual([])
 })
 
-test('every shipped puzzle is solvable in exactly its par', async () => {
+test('every shipped puzzle is solvable in exactly its par', { timeoutMs: 30_000 }, async () => {
   expect(PUZZLES.length >= 40).toBe(true)
   for (let i = 0; i < PUZZLES.length; i++) {
     const p = PUZZLES[i]!

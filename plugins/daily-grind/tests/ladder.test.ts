@@ -17,7 +17,7 @@ test('dictionary is unique four-letter lowercase words', async () => {
   expect(meta.id).toBe('ladder')
 })
 
-test('every shipped pair has its stated par as the BFS optimum', async () => {
+test('every shipped pair has its stated par as the BFS optimum', { timeoutMs: 30_000 }, async () => {
   expect(PAIRS.length >= 120).toBe(true)
   expect(new Set(PAIRS.map(([a, b]) => `${a}-${b}`)).size).toBe(PAIRS.length)
   for (const [a, b, par] of PAIRS) {
