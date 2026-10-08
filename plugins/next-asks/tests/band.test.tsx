@@ -85,6 +85,37 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
+test('the band steps aside while the draft opens a / or @ search', async ($, on) => {
+  engine(on)
+  const clock = mock.clock(on)
+  on('session.messages', () => ({ value: [{ role: 'user', text: 'hi', toolUses: [] }] }))
+  on('model.complete', () => ({
+    value: { isAnswered: true, text: REPLY, usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } },
+  }))
+  // The editor beneath: the draft after the splice.
+  on('prompt.edit', (_$, e) => {
+    const text = e.text.slice(0, e.start) + e.inputText + e.text.slice(e.end)
+    return { text, cursor: e.start + e.inputText.length } as never
+  })
+  const edit = (text: string, inputText: string, start: number, end = start) =>
+    $.prompt.edit({ origin: { kind: 'person' }, text, cursor: start, start, end, inputText, kind: 'composer' } as never)
+
+  const ui = await $.ui.mount({ plugin: 'next-asks', surface: 'terminal', ...BAND })
+  await $.turn.complete(TURN)
+  await clock.advance(1)
+  expect(await ui.find({ key: 'idea-0' })).toBeDefined()
+
+  await edit('', '/', 0)
+  expect(await ui.find({ key: 'idea-0' })).toBeUndefined()
+  await edit('/', '', 0, 1)
+  expect(await ui.find({ key: 'idea-0' })).toBeDefined()
+  await edit('', '@', 0)
+  expect(await ui.find({ key: 'idea-0' })).toBeUndefined()
+  await edit('@', 'fix', 0, 1)
+  expect(await ui.find({ key: 'idea-0' })).toBeDefined()
+  await ui.unmount()
+})
+
 test('subagent turns and interrupted turns ask nothing', async ($, on) => {
   engine(on)
   const clock = mock.clock(on)
