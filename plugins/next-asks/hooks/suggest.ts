@@ -22,6 +22,28 @@ export const transcript = (messages: readonly SessionMessage[]): string => {
   return lines.join('\n\n').slice(-TAIL_CHARS)
 }
 
+/** Width of the `1: ` a hotkeyed Button draws before its label. */
+export const HOTKEY_PREFIX = 3
+
+/**
+ * Word-wraps `text` to `width` cells with continuation lines indented by
+ * `HOTKEY_PREFIX`, so a wrapped label hangs under its first word, not its `1:`.
+ */
+export const hangingWrap = (text: string, width: number): string => {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (line !== '' && line.length + 1 + word.length > width) {
+      lines.push(line)
+      line = word
+    } else {
+      line = line === '' ? word : `${line} ${word}`
+    }
+  }
+  if (line !== '') lines.push(line)
+  return lines.join(`\n${' '.repeat(HOTKEY_PREFIX)}`)
+}
+
 /** Haiku's reply as at most `MAX_IDEAS` clean one-line asks. */
 export const parseIdeas = (reply: string): string[] => {
   if (/^\s*NONE\s*$/i.test(reply)) return []

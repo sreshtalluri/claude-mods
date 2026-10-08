@@ -24,7 +24,7 @@
       "name": "next-asks",
       "source": "./plugins/next-asks",
       "description": "After each turn, a band above the prompt suggests a few things worth asking Claude next that you might not think of.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { parseIdeas, SYSTEM, transcript } from './suggest'
+import { hangingWrap, HOTKEY_PREFIX, parseIdeas, SYSTEM, transcript } from './suggest'
 
 const ideas = atom({ plugin: 'next-asks', key: 'ideas' } as const, [] as string[])
 const isHidden = atom({ plugin: 'next-asks', key: 'isHidden' } as const, false)
@@ -44,6 +44,10 @@ export const register: Register = on => {
     }
 
     const { Box, Button, Text } = $.ui.resolve(e)
+    // The terminal wraps a label under its `1:`; wrap it ourselves with a hanging indent.
+    // Desktop draws a proportional font, so it wraps on its own.
+    const textWidth = e.props.bodyColumns - 4 - HOTKEY_PREFIX // border 2 + padding 2
+    const label = (idea: string) => (e.surface === 'terminal' ? hangingWrap(idea, textWidth) : idea)
 
     // Theme keys, not hex, so the box follows the person's light or dark theme on every surface.
     return (
@@ -63,7 +67,7 @@ export const register: Register = on => {
         {list.map((idea, i) => (
           <Button
             key={`idea-${i}`}
-            label={idea}
+            label={label(idea)}
             hotkey={String(i + 1)}
             plain
             onPress={() => $.prompt.fill({ text: idea })}
